@@ -36,16 +36,15 @@ Inherited object for ESP32 modules that has a TWAI driver, for use with NMEA2000
 // Sample point should be as close to 87.5% but not past.
 // SJW = 1
 
-#define TWAI_TIMING_CONFIG_NMEA2000()                                       \
-  {                                                                         \
-    .brp = 20, .tseg_1 = 13, .tseg_2 = 2, .sjw = 1, .triple_sampling = true \
-  }
-
-
 // #define TWAI_TIMING_CONFIG_NMEA2000()                                       \
 //   {                                                                         \
-//     .brp = 16, .tseg_1 = 16, .tseg_2 = 3, .sjw = 1, .triple_sampling = true \
+//     .brp = 20, .tseg_1 = 13, .tseg_2 = 2, .sjw = 1, .triple_sampling = true \
 //   }
+
+#define TWAI_TIMING_CONFIG_NMEA2000()                                       \
+  {                                                                         \
+    .brp = 16, .tseg_1 = 16, .tseg_2 = 3, .sjw = 1, .triple_sampling = true \
+  }
 
 bool tNMEA2000_esp32::CanInUse = false;
 tNMEA2000_esp32 *pNMEA2000_esp32 = 0;
@@ -76,19 +75,14 @@ bool tNMEA2000_esp32::CANOpen()
 //*****************************************************************************
 bool tNMEA2000_esp32::CANSendFrame(unsigned long id, unsigned char len, const unsigned char *buf, bool /*wait_sent*/)
 {
-  twai_message_t message = { 
-    {
-       { 
-        .extd = 1, 
-        .ss=1,
-        .dlc_non_comp = len > 8 ? 1U : 0U
-        } 
-    },
-    .identifier = id,
-    .data_length_code = max(len, (unsigned char)8)
-    };
-
-  memcpy(message.data, buf, message.data_length_code);
+  twai_message_t message;
+  message.flags = 0;
+  message.extd = 1;
+  message.data_length_code = len > 8 ? 8 : len;
+  message.dlc_non_comp = len > 8 ? 1 : 0;
+  message.ss = 1;
+  message.identifier = id;
+  memcpy(message.data, buf, len);
 
   // Queue message for transmission
   return twai_transmit(&message, 0) == ESP_OK;
