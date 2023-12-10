@@ -36,6 +36,8 @@ before including NMEA2000_esp32.h or NMEA2000_CAN.h
 #include "NMEA2000.h"
 #include "N2kMsg.h"
 
+#include "driver/gpio.h"
+
 #ifndef ESP32_CAN_TX_PIN
 #define ESP32_CAN_TX_PIN GPIO_NUM_16
 #endif
