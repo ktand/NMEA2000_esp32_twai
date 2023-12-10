@@ -36,15 +36,9 @@ Inherited object for ESP32 modules that has a TWAI driver, for use with NMEA2000
 // Sample point should be as close to 87.5% but not past.
 // SJW = 1
 
-// #define TWAI_TIMING_CONFIG_NMEA2000()                                       \
-//   {                                                                         \
-//     .brp = 20, .tseg_1 = 13, .tseg_2 = 2, .sjw = 1, .triple_sampling = true \
-//   }
+// #define TWAI_TIMING_CONFIG_NMEA2000() { .brp = 20, .tseg_1 = 13, .tseg_2 = 2, .sjw = 1, .triple_sampling = true }
 
-#define TWAI_TIMING_CONFIG_NMEA2000()                                       \
-  {                                                                         \
-    .brp = 16, .tseg_1 = 16, .tseg_2 = 3, .sjw = 1, .triple_sampling = true \
-  }
+#define TWAI_TIMING_CONFIG_NMEA2000() { .brp = 16, .tseg_1 = 16, .tseg_2 = 3, .sjw = 1, .triple_sampling = true }
 
 bool tNMEA2000_esp32::CanInUse = false;
 tNMEA2000_esp32 *pNMEA2000_esp32 = 0;
