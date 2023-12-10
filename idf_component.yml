@@ -5,7 +5,6 @@ url: https://github.com/ktand/NMEA2000_esp32_twai
 ## IDF Component Manager Manifest File
 dependencies:
   NMEA_2000:
-    path: NMEA_2000
     git: https://github.com/ttlappalainen/NMEA2000_esp32.git
   ## Required IDF version
   idf:
