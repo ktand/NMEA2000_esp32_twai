@@ -78,8 +78,13 @@ bool tNMEA2000_esp32::CANSendFrame(unsigned long id, unsigned char len, const un
   message.identifier = id;
   memcpy(message.data, buf, len);
 
+  esp_err_t res = twai_transmit(&message, 0);
+
   // Queue message for transmission
-  return twai_transmit(&message, 0) == ESP_OK;
+  if (res == ESP_ERR_INVALID_STATE)
+    twai_initiate_recovery();
+  
+  return res == ESP_OK;
 }
 
 //*****************************************************************************
@@ -106,6 +111,7 @@ void tNMEA2000_esp32::CAN_init()
 
   g_config.rx_queue_len = 50;
   g_config.tx_queue_len = 50;
+  g_config.intr_flags = ESP_INTR_FLAG_LOWMED;
 
   twai_timing_config_t t_config = TWAI_TIMING_CONFIG_NMEA2000();
   twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
