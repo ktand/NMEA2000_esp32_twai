@@ -25,6 +25,7 @@ Inherited object for ESP32 modules that has a TWAI driver, for use with NMEA2000
 
 */
 
+#include "esp_log.h"
 #include "driver/twai.h"
 #include "NMEA2000_esp32.h"
 
@@ -78,12 +79,32 @@ bool tNMEA2000_esp32::CANSendFrame(unsigned long id, unsigned char len, const un
   message.identifier = id;
   memcpy(message.data, buf, len);
 
+  // Queue message for transmission
   esp_err_t res = twai_transmit(&message, 0);
 
-  // Queue message for transmission
   if (res == ESP_ERR_INVALID_STATE)
-    twai_initiate_recovery();
-  
+  {
+    twai_status_info_t status;
+
+    if (twai_get_status_info(&status) == ESP_OK)
+    {
+      // ESP_LOGI(TAG, "twai status = %x", status.state);
+      switch (status.state)
+      {
+      case TWAI_STATE_STOPPED:
+        // ESP_LOGI(TAG, "twai_start");
+        twai_start();
+        break;
+      case TWAI_STATE_BUS_OFF:
+        // ESP_LOGI(TAG, "twai_initiate_recovery");
+        twai_initiate_recovery();
+        break;
+      default:
+        break;
+      }
+      return false;
+    }
+  }
   return res == ESP_OK;
 }
 
