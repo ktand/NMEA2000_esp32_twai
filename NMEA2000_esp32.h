@@ -44,6 +44,9 @@ before including NMEA2000_esp32.h or NMEA2000_CAN.h
 #ifndef ESP32_CAN_RX_PIN
 #define ESP32_CAN_RX_PIN GPIO_NUM_4
 #endif
+#ifndef ESP32_CAN_RX_TICKS_WAIT
+#define ESP32_CAN_RX_TICKS_WAIT 0
+#endif
 
 class tNMEA2000_esp32 : public tNMEA2000
 {
@@ -54,6 +57,7 @@ private:
 protected:
   gpio_num_t TxPin;
   gpio_num_t RxPin;
+  TickType_t RxWaitTicks;
 
 protected:
   void CAN_init();
@@ -65,7 +69,7 @@ public:
   virtual void InitCANFrameBuffers();
 
 public:
-  tNMEA2000_esp32(gpio_num_t _TxPin = ESP32_CAN_TX_PIN, gpio_num_t _RxPin = ESP32_CAN_RX_PIN);
+  tNMEA2000_esp32(gpio_num_t _TxPin = ESP32_CAN_TX_PIN, gpio_num_t _RxPin = ESP32_CAN_RX_PIN, TickType_t rxWaitTicks = ESP32_CAN_RX_TICKS_WAIT);
 };
 
 #endif

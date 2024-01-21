@@ -45,7 +45,7 @@ bool tNMEA2000_esp32::CanInUse = false;
 tNMEA2000_esp32 *pNMEA2000_esp32 = 0;
 
 //*****************************************************************************
-tNMEA2000_esp32::tNMEA2000_esp32(gpio_num_t _TxPin, gpio_num_t _RxPin) : tNMEA2000(), IsOpen(false), TxPin(_TxPin), RxPin(_RxPin)
+tNMEA2000_esp32::tNMEA2000_esp32(gpio_num_t _TxPin, gpio_num_t _RxPin, TickType_t _rxWaitTicks) : tNMEA2000(), IsOpen(false), TxPin(_TxPin), RxPin(_RxPin), RxWaitTicks(_rxWaitTicks)
 {
 }
 
@@ -113,7 +113,7 @@ bool tNMEA2000_esp32::CANGetFrame(unsigned long &id, unsigned char &len, unsigne
 {
   twai_message_t message;
 
-  if (twai_receive(&message, 0) == ESP_OK && message.extd)
+  if (twai_receive(&message, RxWaitTicks) == ESP_OK && message.extd)
   {
     id = message.identifier;
     len = message.data_length_code;
