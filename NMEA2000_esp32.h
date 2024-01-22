@@ -33,6 +33,7 @@ before including NMEA2000_esp32.h or NMEA2000_CAN.h
 #ifndef _NMEA2000_ESP32_H_
 #define _NMEA2000_ESP32_H_
 
+#include "freertos/FreeRTOS.h"
 #include "NMEA2000.h"
 #include "N2kMsg.h"
 
