@@ -33,9 +33,9 @@ before including NMEA2000_esp32.h or NMEA2000_CAN.h
 #ifndef _NMEA2000_ESP32_H_
 #define _NMEA2000_ESP32_H_
 
-#include "freertos/FreeRTOS.h"
-#include "NMEA2000.h"
 #include "N2kMsg.h"
+#include "NMEA2000.h"
+#include "freertos/FreeRTOS.h"
 
 #include "driver/gpio.h"
 
@@ -49,28 +49,50 @@ before including NMEA2000_esp32.h or NMEA2000_CAN.h
 #define ESP32_CAN_RX_TICKS_WAIT 0
 #endif
 
+#ifndef ESP32_CAN_STATISTICS
+#define ESP32_CAN_STATISTICS 1
+#endif
+
 class tNMEA2000_esp32 : public tNMEA2000
 {
-private:
-  bool IsOpen;
-  static bool CanInUse;
+  private:
+    bool IsOpen;
+    static bool CanInUse;
 
-protected:
-  gpio_num_t TxPin;
-  gpio_num_t RxPin;
-  TickType_t RxWaitTicks;
+#if ESP32_CAN_STATISTICS == 1
+    unsigned int RxBits = 0;
+    unsigned int RxPackets = 0;
 
-protected:
-  void CAN_init();
+    unsigned int TxBits = 0;
+    unsigned int TxPackets = 0;
 
-public:
-  bool CANSendFrame(unsigned long id, unsigned char len, const unsigned char *buf, bool wait_sent = true);
-  bool CANOpen();
-  bool CANGetFrame(unsigned long &id, unsigned char &len, unsigned char *buf);
-  virtual void InitCANFrameBuffers();
+    static void Timer_tick(void *arg);    
+#endif
 
-public:
-  tNMEA2000_esp32(gpio_num_t _TxPin = ESP32_CAN_TX_PIN, gpio_num_t _RxPin = ESP32_CAN_RX_PIN, TickType_t rxWaitTicks = ESP32_CAN_RX_TICKS_WAIT);
+  protected:
+    gpio_num_t TxPin;
+    gpio_num_t RxPin;
+    TickType_t RxWaitTicks;
+
+#if ESP32_CAN_STATISTICS == 1
+    unsigned int RxBitsPerSeconds = 0;
+    unsigned int RxPacketsPerSecond = 0;
+
+    unsigned int TxBitsPerSecond = 0;
+    unsigned int TxPacketsPerSecond = 0;
+#endif
+
+  protected:
+    void CAN_init();
+
+  public:
+    bool CANSendFrame(unsigned long id, unsigned char len, const unsigned char *buf, bool wait_sent = true);
+    bool CANOpen();
+    bool CANGetFrame(unsigned long &id, unsigned char &len, unsigned char *buf);
+    virtual void InitCANFrameBuffers();
+
+  public:
+    tNMEA2000_esp32(gpio_num_t _TxPin = ESP32_CAN_TX_PIN, gpio_num_t _RxPin = ESP32_CAN_RX_PIN, TickType_t rxWaitTicks = ESP32_CAN_RX_TICKS_WAIT);
 };
 
 #endif
