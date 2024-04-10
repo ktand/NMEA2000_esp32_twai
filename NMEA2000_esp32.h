@@ -35,9 +35,9 @@ before including NMEA2000_esp32.h or NMEA2000_CAN.h
 
 #include "N2kMsg.h"
 #include "NMEA2000.h"
+#include "esp_log.h"
 #include "freertos/FreeRTOS.h"
-
-#include "driver/gpio.h"
+#include "driver/twai.h"
 
 #ifndef ESP32_CAN_TX_PIN
 #define ESP32_CAN_TX_PIN GPIO_NUM_16
@@ -50,8 +50,12 @@ before including NMEA2000_esp32.h or NMEA2000_CAN.h
 #endif
 
 #ifndef ESP32_CAN_STATISTICS
-#define ESP32_CAN_STATISTICS 1
+#define ESP32_CAN_STATISTICS 0
 #endif
+
+//#define ESP32_CAN_ISR_IN_IRAM
+
+typedef void (*alerts_cb_t)(uint32_t alerts, bool is_error);
 
 class tNMEA2000_esp32 : public tNMEA2000
 {
@@ -66,13 +70,23 @@ class tNMEA2000_esp32 : public tNMEA2000
     unsigned int TxBits = 0;
     unsigned int TxPackets = 0;
 
-    static void Timer_tick(void *arg);    
+    static void Timer_tick(void *arg);
 #endif
 
   protected:
     gpio_num_t TxPin;
     gpio_num_t RxPin;
-    TickType_t RxWaitTicks;
+
+    TickType_t receive_wait_ticks;
+
+    TaskHandle_t alert_task_handle;
+
+    SemaphoreHandle_t alert_task_semaphore;
+    alerts_cb_t alerts_callback = nullptr;
+
+    static const int ERROR_ALERTS_TO_WATCH = TWAI_ALERT_ABOVE_ERR_WARN | TWAI_ALERT_ERR_PASS | TWAI_ALERT_BUS_OFF | TWAI_ALERT_RX_FIFO_OVERRUN;
+    static const int DATA_EVENTS_TO_WATCH = TWAI_ALERT_TX_IDLE | TWAI_ALERT_TX_SUCCESS | TWAI_ALERT_RX_DATA;
+    static const int ALERTS_TO_WATCH = ERROR_ALERTS_TO_WATCH | DATA_EVENTS_TO_WATCH;
 
 #if ESP32_CAN_STATISTICS == 1
     unsigned int RxBitsPerSeconds = 0;
@@ -86,13 +100,22 @@ class tNMEA2000_esp32 : public tNMEA2000
     void CAN_init();
 
   public:
+    tNMEA2000_esp32(gpio_num_t _TxPin = ESP32_CAN_TX_PIN, gpio_num_t _RxPin = ESP32_CAN_RX_PIN, TickType_t rxWaitTicks = ESP32_CAN_RX_TICKS_WAIT);
+
     bool CANSendFrame(unsigned long id, unsigned char len, const unsigned char *buf, bool wait_sent = true);
     bool CANOpen();
     bool CANGetFrame(unsigned long &id, unsigned char &len, unsigned char *buf);
+
     virtual void InitCANFrameBuffers();
 
-  public:
-    tNMEA2000_esp32(gpio_num_t _TxPin = ESP32_CAN_TX_PIN, gpio_num_t _RxPin = ESP32_CAN_RX_PIN, TickType_t rxWaitTicks = ESP32_CAN_RX_TICKS_WAIT);
+    void SetAlertsCallback(alerts_cb_t cb) {alerts_callback = cb;};
+
+    void SetLogLevel(esp_log_level_t level);
+
+  private:
+    [[noreturn]] static void alert_task(void *parameter);
+
+    static void canIdToN2k(unsigned long id, unsigned char &prio, unsigned long &pgn, unsigned char &src, unsigned char &dst);
 };
 
 #endif
