@@ -1,4 +1,4 @@
-version: "1.0.0"
+version: "1.0.1"
 description: Inherited object for ESP32 Boards that has a TWAI driver, for use with NMEA2000 library. See also NMEA2000 library.
 url: https://github.com/ktand/NMEA2000_esp32_twai
 
