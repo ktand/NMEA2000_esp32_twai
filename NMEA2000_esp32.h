@@ -33,11 +33,9 @@ before including NMEA2000_esp32.h or NMEA2000_CAN.h
 #ifndef _NMEA2000_ESP32_H_
 #define _NMEA2000_ESP32_H_
 
-#include "N2kMsg.h"
 #include "NMEA2000.h"
-#include "esp_log.h"
-#include "freertos/FreeRTOS.h"
 #include "driver/twai.h"
+#include "esp_log_level.h"
 
 #ifndef ESP32_CAN_TX_PIN
 #define ESP32_CAN_TX_PIN GPIO_NUM_16
@@ -53,7 +51,7 @@ before including NMEA2000_esp32.h or NMEA2000_CAN.h
 #define ESP32_CAN_STATISTICS 0
 #endif
 
-//#define ESP32_CAN_ISR_IN_IRAM
+// #define ESP32_CAN_ISR_IN_IRAM
 
 typedef void (*alerts_cb_t)(uint32_t alerts, bool is_error);
 
@@ -108,7 +106,10 @@ class tNMEA2000_esp32 : public tNMEA2000
 
     virtual void InitCANFrameBuffers();
 
-    void SetAlertsCallback(alerts_cb_t cb) {alerts_callback = cb;};
+    void SetAlertsCallback(alerts_cb_t cb)
+    {
+        alerts_callback = cb;
+    };
 
     void SetLogLevel(esp_log_level_t level);
 
