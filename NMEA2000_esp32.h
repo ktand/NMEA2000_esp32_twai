@@ -36,6 +36,7 @@ before including NMEA2000_esp32.h or NMEA2000_CAN.h
 #include "NMEA2000.h"
 #include "driver/twai.h"
 #include "esp_log_level.h"
+#include "sdkconfig.h"
 
 #ifndef ESP32_CAN_TX_PIN
 #define ESP32_CAN_TX_PIN GPIO_NUM_16
@@ -81,6 +82,10 @@ class tNMEA2000_esp32 : public tNMEA2000
 
     SemaphoreHandle_t alert_task_semaphore;
     alerts_cb_t alerts_callback = nullptr;
+    // Per-frame logging in CANSendFrame()/CANGetFrame(), set by SetLogLevel():
+    // a flag rather than esp_log_level_get() for every frame. Starts from the
+    // default log level, as the per-frame check did.
+    bool LogFrames = CONFIG_LOG_DEFAULT_LEVEL >= ESP_LOG_INFO;
 
     static const int ERROR_ALERTS_TO_WATCH = TWAI_ALERT_ABOVE_ERR_WARN | TWAI_ALERT_ERR_PASS | TWAI_ALERT_BUS_OFF | TWAI_ALERT_RX_FIFO_OVERRUN;
     static const int DATA_EVENTS_TO_WATCH = TWAI_ALERT_TX_IDLE | TWAI_ALERT_TX_SUCCESS | TWAI_ALERT_RX_DATA;
@@ -96,6 +101,12 @@ class tNMEA2000_esp32 : public tNMEA2000
 
   protected:
     void CAN_init();
+    // The data alerts (a wakeup of the alert task for every frame) only for
+    // an alerts callback; the error alerts always.
+    uint32_t AlertsToWatch() const
+    {
+        return alerts_callback != nullptr ? ALERTS_TO_WATCH : ERROR_ALERTS_TO_WATCH;
+    }
 
   public:
     tNMEA2000_esp32(gpio_num_t _TxPin = ESP32_CAN_TX_PIN, gpio_num_t _RxPin = ESP32_CAN_RX_PIN, TickType_t rxWaitTicks = ESP32_CAN_RX_TICKS_WAIT);
@@ -106,10 +117,7 @@ class tNMEA2000_esp32 : public tNMEA2000
 
     virtual void InitCANFrameBuffers();
 
-    void SetAlertsCallback(alerts_cb_t cb)
-    {
-        alerts_callback = cb;
-    };
+    void SetAlertsCallback(alerts_cb_t cb);
 
     void SetLogLevel(esp_log_level_t level);
 

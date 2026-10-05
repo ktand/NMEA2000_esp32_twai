@@ -89,7 +89,7 @@ void tNMEA2000_esp32::CAN_init()
 
     g_config.rx_queue_len = 32;
     g_config.tx_queue_len = 32;
-    g_config.alerts_enabled = ALERTS_TO_WATCH;
+    g_config.alerts_enabled = AlertsToWatch();
 
 #ifdef ESP32_CAN_ISR_IN_IRAM
     g_config.intr_flags = ESP_INTR_FLAG_LEVEL3 | ESP_INTR_FLAG_IRAM;
@@ -144,7 +144,7 @@ bool tNMEA2000_esp32::CANSendFrame(unsigned long id, unsigned char len, const un
         return false;
     }
 
-    if (esp_log_level_get(TAG) >= ESP_LOG_INFO)
+    if (LogFrames)
     {
         canIdToN2k(id, prio, pgn, src, dst);
 
@@ -197,7 +197,7 @@ bool tNMEA2000_esp32::CANGetFrame(unsigned long &id, unsigned char &len, unsigne
             unsigned char prio, src, dst;
             unsigned long pgn;
 
-            if (esp_log_level_get(TAG) >= ESP_LOG_INFO)
+            if (LogFrames)
             {
                 canIdToN2k(id, prio, pgn, src, dst);
 
@@ -318,7 +318,7 @@ void tNMEA2000_esp32::canIdToN2k(unsigned long id, unsigned char &prio, unsigned
             }
 
             // Start monitoring alerts again
-            twai_reconfigure_alerts(ALERTS_TO_WATCH, nullptr);
+            twai_reconfigure_alerts(pThis->AlertsToWatch(), nullptr);
         }
     }
 }
@@ -326,4 +326,15 @@ void tNMEA2000_esp32::canIdToN2k(unsigned long id, unsigned char &prio, unsigned
 void tNMEA2000_esp32::SetLogLevel(esp_log_level_t level)
 {
     esp_log_level_set(TAG, level);
+    LogFrames = level >= ESP_LOG_INFO;
+}
+
+void tNMEA2000_esp32::SetAlertsCallback(alerts_cb_t cb)
+{
+    alerts_callback = cb;
+    if (IsOpen)
+    {
+        // BUS_RECOVERED too, in case a bus-off recovery is under way.
+        twai_reconfigure_alerts(AlertsToWatch() | TWAI_ALERT_BUS_RECOVERED, nullptr);
+    }
 }
