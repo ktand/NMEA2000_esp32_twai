@@ -87,8 +87,8 @@ void tNMEA2000_esp32::CAN_init()
 {
     twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT(TxPin, RxPin, TWAI_MODE_NORMAL);
 
-    g_config.rx_queue_len = 32;
-    g_config.tx_queue_len = 32;
+    g_config.rx_queue_len = rx_queue_len;
+    g_config.tx_queue_len = tx_queue_len;
     g_config.alerts_enabled = AlertsToWatch();
 
 #ifdef ESP32_CAN_ISR_IN_IRAM
@@ -327,6 +327,17 @@ void tNMEA2000_esp32::SetLogLevel(esp_log_level_t level)
 {
     esp_log_level_set(TAG, level);
     LogFrames = level >= ESP_LOG_INFO;
+}
+
+void tNMEA2000_esp32::SetTWAIQueueLengths(uint32_t rxQueueLen, uint32_t txQueueLen)
+{
+    if (IsOpen)
+    {
+        ESP_LOGW(TAG, "TWAI queue lengths must be set before Open()");
+        return;
+    }
+    rx_queue_len = rxQueueLen;
+    tx_queue_len = txQueueLen;
 }
 
 void tNMEA2000_esp32::SetAlertsCallback(alerts_cb_t cb)

@@ -48,6 +48,16 @@ before including NMEA2000_esp32.h or NMEA2000_CAN.h
 #define ESP32_CAN_RX_TICKS_WAIT 0
 #endif
 
+// The TWAI driver's receive and transmit queues, in frames. A full bus
+// (250 kbit/s) carries about 1800 frames a second, so 32 frames hold under
+// 20 ms of it: longer than that between two reads and frames are lost.
+#ifndef ESP32_CAN_RX_QUEUE_LEN
+#define ESP32_CAN_RX_QUEUE_LEN 32
+#endif
+#ifndef ESP32_CAN_TX_QUEUE_LEN
+#define ESP32_CAN_TX_QUEUE_LEN 32
+#endif
+
 #ifndef ESP32_CAN_STATISTICS
 #define ESP32_CAN_STATISTICS 0
 #endif
@@ -77,6 +87,10 @@ class tNMEA2000_esp32 : public tNMEA2000
     gpio_num_t RxPin;
 
     TickType_t receive_wait_ticks;
+
+    // TWAI driver queue lengths in frames (SetTWAIQueueLengths()).
+    uint32_t rx_queue_len = ESP32_CAN_RX_QUEUE_LEN;
+    uint32_t tx_queue_len = ESP32_CAN_TX_QUEUE_LEN;
 
     TaskHandle_t alert_task_handle;
 
@@ -120,6 +134,19 @@ class tNMEA2000_esp32 : public tNMEA2000
     void SetAlertsCallback(alerts_cb_t cb);
 
     void SetLogLevel(esp_log_level_t level);
+
+    // Sets the TWAI driver's queue lengths in frames (defaults
+    // ESP32_CAN_RX_QUEUE_LEN and ESP32_CAN_TX_QUEUE_LEN). Call before Open();
+    // ignored once the driver is installed. Each frame takes about 20 bytes.
+    void SetTWAIQueueLengths(uint32_t rxQueueLen, uint32_t txQueueLen);
+    uint32_t GetTWAIRxQueueLength() const
+    {
+        return rx_queue_len;
+    }
+    uint32_t GetTWAITxQueueLength() const
+    {
+        return tx_queue_len;
+    }
 
   private:
     [[noreturn]] static void alert_task(void *parameter);
