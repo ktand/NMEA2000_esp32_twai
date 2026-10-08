@@ -49,13 +49,15 @@ before including NMEA2000_esp32.h or NMEA2000_CAN.h
 #endif
 
 // The TWAI driver's receive and transmit queues, in frames. A full bus
-// (250 kbit/s) carries about 1800 frames a second, so 32 frames hold under
-// 20 ms of it: longer than that between two reads and frames are lost.
+// (250 kbit/s) carries about 1800 frames a second, so 128 frames hold about
+// 70 ms of it: longer than that between two reads and frames are lost. TX
+// takes a burst (a reply to a request is up to 32 frames). 13 bytes a frame
+// on classic TWAI, ~80 on TWAI-FD chips: lower these there if RAM is tight.
 #ifndef ESP32_CAN_RX_QUEUE_LEN
-#define ESP32_CAN_RX_QUEUE_LEN 32
+#define ESP32_CAN_RX_QUEUE_LEN 128
 #endif
 #ifndef ESP32_CAN_TX_QUEUE_LEN
-#define ESP32_CAN_TX_QUEUE_LEN 32
+#define ESP32_CAN_TX_QUEUE_LEN 128
 #endif
 
 // How long CANSendFrame() waits for TX queue space when tNMEA2000 asks it to
@@ -107,9 +109,10 @@ class tNMEA2000_esp32 : public tNMEA2000
     SemaphoreHandle_t alert_task_semaphore;
     alerts_cb_t alerts_callback = nullptr;
     // Per-frame logging in CANSendFrame()/CANGetFrame(), set by SetLogLevel():
-    // a flag rather than esp_log_level_get() for every frame. Starts from the
-    // default log level, as the per-frame check did.
-    bool LogFrames = CONFIG_LOG_DEFAULT_LEVEL >= ESP_LOG_INFO;
+    // a flag rather than esp_log_level_get() for every frame. Off until asked
+    // for (SetLogLevel(ESP_LOG_INFO)): on a UART console each line blocks the
+    // caller for milliseconds, which caps the bus at ~130 frames a second.
+    bool LogFrames = false;
     // Last CANSendFrame() failure logged (esp_timer us): at most one a second,
     // since a dead bus fails every frame and each log line can block for ms.
     int64_t LastSendErrorLogUs = 0;
