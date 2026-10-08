@@ -148,7 +148,8 @@ bool tNMEA2000_esp32::CANSendFrame(unsigned long id, unsigned char len, const un
 
     if (status_info.state != TWAI_STATE_RUNNING)
     {
-        ESP_LOGE(TAG, "Failed to send CAN Frame: Driver is not in running state: %x", status_info.state);
+        if (SendErrorLogDue())
+            ESP_LOGE(TAG, "Failed to send CAN Frame: Driver is not in running state: %x", status_info.state);
         return false;
     }
 
@@ -168,7 +169,7 @@ bool tNMEA2000_esp32::CANSendFrame(unsigned long id, unsigned char len, const un
     memcpy(message.data, buf, len);
 
     // Queue message for transmission
-    esp_err_t res = twai_transmit(&message, wait_sent ? portMAX_DELAY : 0);
+    esp_err_t res = twai_transmit(&message, wait_sent ? pdMS_TO_TICKS(ESP32_CAN_TX_WAIT_MS) : 0);
 
     if (res == ESP_OK)
     {
@@ -182,8 +183,21 @@ bool tNMEA2000_esp32::CANSendFrame(unsigned long id, unsigned char len, const un
         return true;
     }
 
-    ESP_LOGE(TAG, "Failed to queue message for transmission: %d\n", res);
+    if (SendErrorLogDue())
+        ESP_LOGE(TAG, "Failed to queue message for transmission: %s", esp_err_to_name(res));
     return false;
+}
+
+//*****************************************************************************
+bool tNMEA2000_esp32::SendErrorLogDue()
+{
+    int64_t now = esp_timer_get_time();
+
+    if (now - LastSendErrorLogUs < 1000 * 1000)
+        return false;
+
+    LastSendErrorLogUs = now;
+    return true;
 }
 
 //*****************************************************************************

@@ -58,6 +58,16 @@ before including NMEA2000_esp32.h or NMEA2000_CAN.h
 #define ESP32_CAN_TX_QUEUE_LEN 32
 #endif
 
+// How long CANSendFrame() waits for TX queue space when tNMEA2000 asks it to
+// (wait_sent, the frames of a fast packet). On a working bus a slot frees in
+// well under a millisecond; with no node to ACK (alone on the bus, bus
+// unpowered) the controller retries the queue head forever, so an unbounded
+// wait would hang the caller. On timeout the frame fails and tNMEA2000 stops
+// sending that message.
+#ifndef ESP32_CAN_TX_WAIT_MS
+#define ESP32_CAN_TX_WAIT_MS 10
+#endif
+
 #ifndef ESP32_CAN_STATISTICS
 #define ESP32_CAN_STATISTICS 0
 #endif
@@ -100,6 +110,10 @@ class tNMEA2000_esp32 : public tNMEA2000
     // a flag rather than esp_log_level_get() for every frame. Starts from the
     // default log level, as the per-frame check did.
     bool LogFrames = CONFIG_LOG_DEFAULT_LEVEL >= ESP_LOG_INFO;
+    // Last CANSendFrame() failure logged (esp_timer us): at most one a second,
+    // since a dead bus fails every frame and each log line can block for ms.
+    int64_t LastSendErrorLogUs = 0;
+    bool SendErrorLogDue();
 
     static const int ERROR_ALERTS_TO_WATCH = TWAI_ALERT_ABOVE_ERR_WARN | TWAI_ALERT_ERR_PASS | TWAI_ALERT_BUS_OFF | TWAI_ALERT_RX_FIFO_OVERRUN;
     static const int DATA_EVENTS_TO_WATCH = TWAI_ALERT_TX_IDLE | TWAI_ALERT_TX_SUCCESS | TWAI_ALERT_RX_DATA;
