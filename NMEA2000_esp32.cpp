@@ -32,29 +32,37 @@ Inherited object for ESP32 modules that has a TWAI driver, for use with NMEA2000
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "freertos/projdefs.h"
+#include "esp_idf_version.h"
 #include "hal/twai_types.h"
 
 // http://www.bittiming.can-wiki.info/ (Clock Rate set to 80Mhz)
 // https://www.esacademy.com/en/library/calculators/sja1000-timing-calculator.html
 // https://www.simmasoftware.com/j1939.html
 
-// NMEA 2000 = SAE J1939-21
-// Sample point should be as close to 87.5% but not past.
-// SJW = 1
-
-// #define TWAI_TIMING_CONFIG_NMEA2000() { .brp = 20, .tseg_1 = 13, .tseg_2 = 2, .sjw = 1, .triple_sampling = true }
-
 #define TAG "NMEA2000_esp32"
 #define ALERT_TASK_PRIO 10
-
-#define TWAI_TIMING_CONFIG_NMEA2000()                                                                                                         \
-    {                                                                                                                                         \
-        .clk_src = (twai_clock_source_t)0, .quanta_resolution_hz = 0, .brp = 16, .tseg_1 = 16, .tseg_2 = 3, .sjw = 1, .triple_sampling = true \
-    }
 
 #define CAN_FRAME_HEADER_BITS 52
 
 bool tNMEA2000_esp32::CanInUse = false;
+
+// NMEA 2000 bit timing (SAE J1939 / ISO 11783): 250 kbit/s, sample point 87.5 %, SJW 1, single sampling.
+// 16 quanta per bit at 4 MHz: sync (1) + tseg_1 (13) + tseg_2 (2), sample point (1 + 13) / 16.
+// ESP-IDF's generic TWAI_TIMING_CONFIG_250KBITS() samples at 75 %, which is too early for a long backbone.
+static twai_timing_config_t nmea2000_timing_config()
+{
+    twai_timing_config_t config = {};
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 1, 0)
+    config.quanta_resolution_hz = 4000000; // the driver derives brp from the clock source (80 or 40 MHz)
+#else
+    config.brp = 20; // 80 MHz APB / 20 = 4 MHz
+#endif
+    config.tseg_1 = 13;
+    config.tseg_2 = 2;
+    config.sjw = 1;
+    config.triple_sampling = false;
+    return config;
+}
 
 tNMEA2000_esp32 *pNMEA2000_esp32 = 0;
 
@@ -97,7 +105,7 @@ void tNMEA2000_esp32::CAN_init()
     g_config.intr_flags = ESP_INTR_FLAG_LEVEL3;
 #endif
 
-    twai_timing_config_t t_config = TWAI_TIMING_CONFIG_250KBITS();
+    twai_timing_config_t t_config = nmea2000_timing_config();
     twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
 
     // Install TWAI driver
